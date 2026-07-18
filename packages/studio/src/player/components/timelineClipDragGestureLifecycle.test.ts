@@ -49,23 +49,36 @@ describe("timeline clip drag gesture lifecycle", () => {
     }));
     const onMoveElement = vi.fn();
     const stopAutoScroll = vi.fn();
+    const cancelGestureRef = { current: () => false };
     const dispose = mountTimelineClipDragGestureLifecycle({
+      lifecycleRef: {
+        current: {
+          kind: "drag",
+          phase: "active",
+          pointerId: null,
+          sessionEpoch: 0,
+        },
+      },
+      sessionEpochRef: { current: 0 },
+      cancelGestureRef,
+      scrollRef: { current: null },
       draggedClipRef,
       resizingClipRef,
       blockedClipRef: { current: null },
       groupResizeRef: { current: null },
       suppressClickRef: { current: false },
+      gestureSelectedKeysRef: { current: new Set() },
       elementsRef: { current: [element] },
       trackOrderRef: { current: [0] },
-      setDraggedClip,
-      setResizingClip: () => {},
+      setDraggedClipState: setDraggedClip,
+      setResizingClipState: () => {},
       setShowPopover: () => {},
       setRangeSelectionRef: { current: null },
       applyResizePointerRef: { current: () => {} },
       syncClipDragAutoScrollRef: { current: () => {} },
       stopClipDragAutoScrollRef: { current: stopAutoScroll },
       updateDraggedClipPreviewRef: { current: updateDraggedClipPreview },
-      restoreGroupResizeMembers: () => {},
+      publishDraggedClip: setDraggedClip,
       updateElement: vi.fn(),
       onMoveElementRef: { current: onMoveElement },
       onMoveElementsRef: { current: undefined },
@@ -93,5 +106,6 @@ describe("timeline clip drag gesture lifecycle", () => {
     expect(stopAutoScroll).toHaveBeenCalledTimes(1);
 
     dispose();
+    expect(cancelGestureRef.current()).toBe(false);
   });
 });
