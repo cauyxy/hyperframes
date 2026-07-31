@@ -17,7 +17,12 @@ import {
   isHdrColorSpace as isHdrColorSpaceUtil,
   type HdrTransfer,
 } from "../utils/hdr.js";
-import { downloadToTemp, isHttpUrl, UrlDownloadError } from "../utils/urlDownloader.js";
+import {
+  downloadToTemp,
+  isHttpUrl,
+  UrlDownloadError,
+  writeUrlDownloadTelemetry,
+} from "../utils/urlDownloader.js";
 import { runFfmpeg } from "../utils/runFfmpeg.js";
 import { DEFAULT_CONFIG, type EngineConfig } from "../config.js";
 import { unwrapTemplate } from "../utils/htmlTemplate.js";
@@ -244,6 +249,14 @@ export function classifyVideoExtractionError(error: unknown): VideoSourceExtract
         "source_rejected",
         false,
         "Video source download was rejected",
+        diagnostic,
+      );
+    }
+    if (error.kind === "invalid_payload") {
+      return new VideoSourceExtractionError(
+        "invalid_media",
+        false,
+        "Video source download returned a non-media payload",
         diagnostic,
       );
     }
@@ -1071,8 +1084,13 @@ export async function extractAllVideoFrames(
       if (isHttpUrl(videoPath)) {
         const downloadDir = join(options.outputDir, "_downloads");
         mkdirSync(downloadDir, { recursive: true });
-        videoPath = await downloadToTemp(videoPath, downloadDir, undefined, signal, () =>
-          recordTransientRetries(1),
+        videoPath = await downloadToTemp(
+          videoPath,
+          downloadDir,
+          undefined,
+          signal,
+          () => recordTransientRetries(1),
+          { expectedContent: "media", onTelemetry: writeUrlDownloadTelemetry },
         );
       }
 

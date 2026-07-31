@@ -11,6 +11,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createHash } from "node:crypto";
 import { assertPublicHttpsUrl, downloadToTemp, UrlDownloadError } from "./urlDownloader.js";
 
 const tempDirs: string[] = [];
@@ -25,6 +26,17 @@ function temporaryDownloadEntries(dir: string): string[] {
   return readdirSync(dir).filter(
     (name) => name.includes(".partial-") || name.startsWith(".hf-download-"),
   );
+}
+
+function isoBmffMediaBytes(marker: string): Buffer {
+  const ftyp = Buffer.alloc(24);
+  ftyp.writeUInt32BE(24, 0);
+  ftyp.write("ftyp", 4, 4, "ascii");
+  ftyp.write("isom", 8, 4, "ascii");
+  ftyp.writeUInt32BE(0, 12);
+  ftyp.write("isom", 16, 4, "ascii");
+  ftyp.write("mp42", 20, 4, "ascii");
+  return Buffer.concat([ftyp, Buffer.from(marker)]);
 }
 
 afterEach(() => {
@@ -120,6 +132,18 @@ describe("assertPublicHttpsUrl — SSRF guard", () => {
     expect(() => assertPublicHttpsUrl("not-a-url")).toThrow("Invalid URL");
     expect(() => assertPublicHttpsUrl("")).toThrow("Invalid URL");
   });
+
+  it("never echoes a rejected signed URL in diagnostics", () => {
+    const signed = "http://127.0.0.1/private/customer.mp4?X-Amz-Signature=super-secret";
+    let message = "";
+    try {
+      assertPublicHttpsUrl(signed);
+    } catch (error) {
+      message = error instanceof Error ? error.message : String(error);
+    }
+    expect(message).not.toContain("customer.mp4");
+    expect(message).not.toContain("super-secret");
+  });
 });
 
 describe("downloadToTemp atomic publication and bounded retry", () => {
@@ -141,7 +165,10 @@ describe("downloadToTemp atomic publication and bounded retry", () => {
     expect(fetchMock).toHaveBeenNthCalledWith(
       2,
       "https://media.example/final.mp4",
-      expect.objectContaining({ redirect: "manual" }),
+      expect.objectContaining({
+        redirect: "manual",
+        headers: { "accept-encoding": "identity" },
+      }),
     );
     expect(readFileSync(path, "utf8")).toBe("complete");
     expect(temporaryDownloadEntries(dir)).toEqual([]);
@@ -210,6 +237,365 @@ describe("downloadToTemp atomic publication and bounded retry", () => {
     );
     expect(readFileSync(path, "utf8")).toBe("complete");
     expect(temporaryDownloadEntries(dir)).toEqual([]);
+  });
+
+  it("does not expose a signed URL supplied through hostile HTTP status text", async () => {
+    const signedUrl =
+      "https://cdn.example/private/customer-video?X-Amz-Signature=super-secret-signature";
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(new Response(null, { status: 503, statusText: signedUrl }));
+    vi.stubGlobal("fetch", fetchMock);
+    const dir = makeTempDir();
+
+    let message = "";
+    try {
+      await downloadToTemp(signedUrl, dir, 1_000);
+    } catch (error) {
+      message = error instanceof Error ? error.message : String(error);
+    }
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(message).toBe("HTTP 503");
+    expect(message).not.toContain("customer-video");
+    expect(message).not.toContain("super-secret-signature");
+  });
+
+  it("rejects a truncated Content-Length response and cleanly refetches once", async () => {
+    const complete = isoBmffMediaBytes("complete");
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(complete.subarray(0, complete.length - 1), {
+          headers: { "content-length": String(complete.length) },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(complete, { headers: { "content-length": String(complete.length) } }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    const dir = makeTempDir();
+    const onTransientRetry = vi.fn();
+
+    const path = await downloadToTemp(
+      "https://cdn.example/truncated.mp4",
+      dir,
+      1_000,
+      undefined,
+      onTransientRetry,
+      { expectedContent: "media" },
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(onTransientRetry).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "length_mismatch", retryable: true }),
+    );
+    expect(readFileSync(path)).toEqual(complete);
+    expect(temporaryDownloadEntries(dir)).toEqual([]);
+  });
+
+  it("does not publish after two repeated length mismatches", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(() =>
+        Promise.resolve(new Response("short", { headers: { "content-length": "12" } })),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    const dir = makeTempDir();
+
+    await expect(
+      downloadToTemp("https://cdn.example/always-short.mp4", dir, 1_000),
+    ).rejects.toMatchObject({
+      kind: "length_mismatch",
+      retryable: true,
+    } satisfies Partial<UrlDownloadError>);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(readdirSync(dir).filter((name) => name.startsWith("download_"))).toEqual([]);
+    expect(temporaryDownloadEntries(dir)).toEqual([]);
+  });
+
+  it("rejects an unsolicited well-formed 206 and succeeds after one clean refetch", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response("part", {
+          status: 206,
+          headers: { "content-range": "bytes 0-3/8", "content-length": "4" },
+        }),
+      )
+      .mockResolvedValueOnce(new Response("complete", { headers: { "content-length": "8" } }));
+    vi.stubGlobal("fetch", fetchMock);
+    const dir = makeTempDir();
+
+    const path = await downloadToTemp("https://cdn.example/unsolicited-range.mp4", dir, 1_000);
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(readFileSync(path, "utf8")).toBe("complete");
+    expect(temporaryDownloadEntries(dir)).toEqual([]);
+  });
+
+  it("rejects malformed 206 responses after exactly one refetch", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response("part", {
+        status: 206,
+        headers: { "content-range": "bytes nonsense" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const dir = makeTempDir();
+
+    await expect(
+      downloadToTemp("https://cdn.example/malformed-range.mp4", dir, 1_000),
+    ).rejects.toMatchObject({
+      kind: "range_protocol",
+      retryable: true,
+      telemetry: expect.objectContaining({ rangeDisposition: "malformed_206" }),
+    } satisfies Partial<UrlDownloadError>);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(temporaryDownloadEntries(dir)).toEqual([]);
+  });
+
+  it("rejects Content-Range on a 200 response", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response("complete", {
+        status: 200,
+        headers: { "content-range": "bytes 0-7/8" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const dir = makeTempDir();
+
+    await expect(
+      downloadToTemp("https://cdn.example/range-on-200.mp4", dir, 1_000),
+    ).rejects.toMatchObject({
+      kind: "range_protocol",
+      retryable: true,
+    } satisfies Partial<UrlDownloadError>);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("retries a checksum mismatch once and publishes only matching bytes", async () => {
+    const corrupt = isoBmffMediaBytes("corrupt");
+    const complete = isoBmffMediaBytes("complete");
+    const expectedSha256 = createHash("sha256").update(complete).digest("hex");
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(corrupt))
+      .mockResolvedValueOnce(new Response(complete));
+    vi.stubGlobal("fetch", fetchMock);
+    const dir = makeTempDir();
+
+    const path = await downloadToTemp(
+      "https://cdn.example/checksum.mp4",
+      dir,
+      1_000,
+      undefined,
+      undefined,
+      { expectedContent: "media", expectedSha256 },
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(readFileSync(path)).toEqual(complete);
+  });
+
+  it("ignores S3 composite checksums that are not full-object SHA-256", async () => {
+    const mediaBytes = isoBmffMediaBytes("multipart-object");
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(mediaBytes, {
+        headers: {
+          "x-amz-checksum-sha256": Buffer.from("not-a-full-object-checksum").toString("base64"),
+          "x-amz-checksum-type": "COMPOSITE",
+        },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const dir = makeTempDir();
+
+    const path = await downloadToTemp(
+      "https://cdn.example/multipart.mp4",
+      dir,
+      1_000,
+      undefined,
+      undefined,
+      { expectedContent: "media" },
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(readFileSync(path)).toEqual(mediaBytes);
+  });
+
+  it("rejects an HTML-as-200 media payload without retrying", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(new Response("  <!doctype html><html><body>denied</body></html>"));
+    vi.stubGlobal("fetch", fetchMock);
+    const dir = makeTempDir();
+
+    await expect(
+      downloadToTemp("https://cdn.example/html-error.mp4", dir, 1_000, undefined, undefined, {
+        expectedContent: "media",
+      }),
+    ).rejects.toMatchObject({
+      kind: "invalid_payload",
+      retryable: false,
+    } satisfies Partial<UrlDownloadError>);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(temporaryDownloadEntries(dir)).toEqual([]);
+  });
+
+  it("rejects arbitrary non-media bytes served as video without retrying", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response('{"message":"access denied"}', {
+        headers: { "content-type": "video/mp4" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const dir = makeTempDir();
+
+    await expect(
+      downloadToTemp("https://cdn.example/wrong-signature.mp4", dir, 1_000, undefined, undefined, {
+        expectedContent: "media",
+      }),
+    ).rejects.toMatchObject({ kind: "invalid_payload", retryable: false });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(readdirSync(dir).filter((name) => name.startsWith("download_"))).toEqual([]);
+  });
+
+  it("accepts valid media bytes through a wrong-MIME redirect", async () => {
+    const mediaBytes = isoBmffMediaBytes("wrong-mime");
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(null, {
+          status: 302,
+          headers: { location: "https://media.example/asset" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(mediaBytes, { headers: { "content-type": "text/html" } }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    const dir = makeTempDir();
+
+    const path = await downloadToTemp(
+      "https://cdn.example/wrong-mime",
+      dir,
+      1_000,
+      undefined,
+      undefined,
+      { expectedContent: "media" },
+    );
+
+    expect(readFileSync(path)).toEqual(mediaBytes);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("accepts extensionless media and emits safe complete integrity telemetry", async () => {
+    const mediaBytes = isoBmffMediaBytes("extensionless");
+    const etag = '"customer-secret-etag"';
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(mediaBytes, {
+        headers: { "content-length": String(mediaBytes.length), etag },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const dir = makeTempDir();
+    const events: unknown[] = [];
+    const signedUrl =
+      "https://cdn.example/private/customer-video?X-Amz-Signature=super-secret-signature";
+
+    const path = await downloadToTemp(signedUrl, dir, 1_000, undefined, undefined, {
+      expectedContent: "media",
+      onTelemetry: (event) => events.push(event),
+    });
+
+    expect(readFileSync(path)).toEqual(mediaBytes);
+    expect(events).toEqual([
+      expect.objectContaining({
+        initialHost: "cdn.example",
+        finalHost: "cdn.example",
+        attempt: 1,
+        outcome: "published",
+        status: 200,
+        expectedBytes: mediaBytes.length,
+        receivedBytes: mediaBytes.length,
+        localSize: mediaBytes.length,
+        localSha256: createHash("sha256").update(mediaBytes).digest("hex"),
+        etagFingerprint: createHash("sha256").update(etag).digest("hex"),
+      }),
+    ]);
+    const serialized = JSON.stringify(events);
+    expect(serialized).not.toContain("customer-video");
+    expect(serialized).not.toContain("super-secret-signature");
+    expect(serialized).not.toContain("customer-secret-etag");
+  });
+
+  it.each([
+    [
+      "mpeg-ts",
+      (() => {
+        const bytes = Buffer.alloc(188 * 3);
+        bytes[0] = 0x47;
+        bytes[188] = 0x47;
+        bytes[376] = 0x47;
+        return bytes;
+      })(),
+    ],
+    [
+      "m2ts",
+      (() => {
+        const bytes = Buffer.alloc(4 + 192 * 3);
+        bytes[4] = 0x47;
+        bytes[196] = 0x47;
+        bytes[388] = 0x47;
+        return bytes;
+      })(),
+    ],
+    [
+      "mxf",
+      Buffer.from([
+        0x06, 0x0e, 0x2b, 0x34, 0x02, 0x05, 0x01, 0x01, 0x0d, 0x01, 0x02, 0x01, 0x01, 0x02, 0x04,
+        0x00, 0x83, 0x00,
+      ]),
+    ],
+  ])("accepts extensionless supported %s container signatures", async (kind, mediaBytes) => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(mediaBytes));
+    vi.stubGlobal("fetch", fetchMock);
+    const dir = makeTempDir();
+
+    const path = await downloadToTemp(
+      `https://cdn.example/extensionless-${kind}`,
+      dir,
+      1_000,
+      undefined,
+      undefined,
+      { expectedContent: "media" },
+    );
+
+    expect(readFileSync(path)).toEqual(mediaBytes);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("redacts signed URLs embedded in underlying fetch failures", async () => {
+    const signedUrl =
+      "https://cdn.example/private/customer-video?X-Amz-Signature=super-secret-signature";
+    const fetchMock = vi
+      .fn()
+      .mockRejectedValue(new TypeError(`fetch failed while requesting ${signedUrl}`));
+    vi.stubGlobal("fetch", fetchMock);
+    const dir = makeTempDir();
+
+    let message = "";
+    try {
+      await downloadToTemp(signedUrl, dir, 1_000);
+    } catch (error) {
+      message = error instanceof Error ? error.message : String(error);
+    }
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(message).toContain("transient network error");
+    expect(message).not.toContain("customer-video");
+    expect(message).not.toContain("super-secret-signature");
   });
 
   it("cancels a streaming HTTP error body before retrying", async () => {
@@ -445,6 +831,46 @@ describe("downloadToTemp atomic publication and bounded retry", () => {
     expect(first).toBe(second);
     expect(existsSync(first)).toBe(true);
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("never overwrites an artifact returned by a concurrent checksum scope", async () => {
+    const firstBytes = isoBmffMediaBytes("first-version");
+    const secondBytes = isoBmffMediaBytes("second-version");
+    const firstSha = createHash("sha256").update(firstBytes).digest("hex");
+    const secondSha = createHash("sha256").update(secondBytes).digest("hex");
+    const fetchMock = vi
+      .fn()
+      .mockImplementationOnce(
+        () =>
+          new Promise<Response>((resolve) =>
+            setTimeout(() => resolve(new Response(firstBytes)), 20),
+          ),
+      )
+      .mockImplementationOnce(
+        () =>
+          new Promise<Response>((resolve) =>
+            setTimeout(() => resolve(new Response(secondBytes)), 5),
+          ),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    const dir = makeTempDir();
+    const url = "https://cdn.example/versioned.mp4";
+
+    const [firstPath, secondPath] = await Promise.all([
+      downloadToTemp(url, dir, 1_000, undefined, undefined, {
+        expectedContent: "media",
+        expectedSha256: firstSha,
+      }),
+      downloadToTemp(url, dir, 1_000, undefined, undefined, {
+        expectedContent: "media",
+        expectedSha256: secondSha,
+      }),
+    ]);
+
+    expect(firstPath).not.toBe(secondPath);
+    expect(readFileSync(firstPath)).toEqual(firstBytes);
+    expect(readFileSync(secondPath)).toEqual(secondBytes);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it("does not let one caller cancellation abort another caller", async () => {

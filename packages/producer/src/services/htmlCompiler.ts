@@ -51,7 +51,13 @@ import {
   type AudioVolumeKeyframe,
   analyzeKeyframeIntervals,
 } from "@hyperframes/engine";
-import { assertPublicHttpsUrl, downloadToTemp, isHttpUrl } from "../utils/urlDownloader.js";
+import {
+  assertPublicHttpsUrl,
+  downloadToTemp,
+  isHttpUrl,
+  safeDownloadUrlIdentity,
+  type UrlDownloadTelemetry,
+} from "../utils/urlDownloader.js";
 import type { Page } from "puppeteer-core";
 import {
   injectDeterministicFontFaces,
@@ -61,6 +67,10 @@ import { prepareAnimatedGifInputs } from "./animatedGifPrep.js";
 import { createStudioPositionSeekReapplyScript } from "@hyperframes/studio-server/manual-edits-render-script";
 import { getPositionEditsRenderScript } from "@hyperframes/core/runtime/position-edits-render";
 import { defaultLogger, type ProducerLogger } from "../logger.js";
+
+function logRemoteDownloadTelemetry(event: UrlDownloadTelemetry): void {
+  defaultLogger.info("[Compiler] Remote asset download integrity", { ...event });
+}
 
 export interface CompiledComposition {
   html: string;
@@ -414,7 +424,10 @@ async function resolveMediaDuration(
   if (isHttpUrl(src)) {
     if (!existsSync(downloadDir)) mkdirSync(downloadDir, { recursive: true });
     try {
-      filePath = await downloadToTemp(src, downloadDir);
+      filePath = await downloadToTemp(src, downloadDir, undefined, undefined, undefined, {
+        expectedContent: "media",
+        onTelemetry: logRemoteDownloadTelemetry,
+      });
     } catch {
       // Download failed (e.g. 404 placeholder URL) — skip gracefully.
       // The element will get duration 0 and be excluded from the render.
@@ -1275,6 +1288,7 @@ async function downloadAndRewriteUrls(
   warnLabel: string,
   logLabel: string,
   extraRewrite?: (html: string, url: string, relPath: string) => string,
+  expectedContent: "media" | "opaque" = "media",
 ): Promise<{ html: string; remoteMediaAssets: Map<string, string> }> {
   if (urlSet.size === 0) return { html, remoteMediaAssets: new Map() };
   if (!existsSync(remoteDir)) mkdirSync(remoteDir, { recursive: true });
@@ -1283,14 +1297,18 @@ async function downloadAndRewriteUrls(
   await Promise.all(
     [...urlSet].map(async (url) => {
       try {
-        const localPath = await downloadToTemp(url, remoteDir);
+        const localPath = await downloadToTemp(url, remoteDir, undefined, undefined, undefined, {
+          expectedContent,
+          onTelemetry: logRemoteDownloadTelemetry,
+        });
         urlToLocal.set(url, localPath);
       } catch (err) {
-        defaultLogger.warn(
-          `[Compiler] ${warnLabel} ${url} — using original URL as fallback. ${
-            err instanceof Error ? err.message : String(err)
-          }`,
-        );
+        const identity = safeDownloadUrlIdentity(url);
+        defaultLogger.warn(`[Compiler] ${warnLabel} — using original URL as fallback.`, {
+          urlFingerprint: identity.urlFingerprint,
+          host: identity.host,
+          error: err instanceof Error ? err.message : String(err),
+        });
       }
     }),
   );
@@ -1346,7 +1364,7 @@ export async function localizeRemoteMediaSources(
     urlSet,
     html,
     join(downloadDir, REMOTE_MEDIA_SUBDIR),
-    "Remote media download failed for",
+    "Remote media download failed",
     "Localized remote media source(s)",
   );
 }
@@ -1389,7 +1407,7 @@ export async function localizeRemoteImageSources(
     urlSet,
     html,
     join(downloadDir, REMOTE_MEDIA_SUBDIR),
-    "Remote image download failed for",
+    "Remote image download failed",
     "Localized remote image source(s)",
   );
 }
@@ -1427,7 +1445,7 @@ export async function localizeRemoteBackgroundImages(
     urlSet,
     html,
     join(downloadDir, REMOTE_MEDIA_SUBDIR),
-    "Remote background-image download failed for",
+    "Remote background-image download failed",
     "Localized remote background-image(s)",
     // Quoted url('..')/url("..") are rewritten by downloadAndRewriteUrls' default
     // replaceAll; this handles the unquoted url(https://..) form.
@@ -1649,9 +1667,10 @@ export async function localizeRemoteFontFaces(
     urlSet,
     processed,
     join(downloadDir, REMOTE_MEDIA_SUBDIR),
-    "Remote font download failed for",
+    "Remote font download failed",
     "Localized remote font face(s)",
     (h, url, relPath) => h.replaceAll(`url(${url})`, `url("${relPath}")`),
+    "opaque",
   );
 }
 

@@ -262,7 +262,16 @@ export {
   type KeyframeAnalysis,
 } from "./utils/ffprobe.js";
 
-export { assertPublicHttpsUrl, downloadToTemp, isHttpUrl } from "./utils/urlDownloader.js";
+export {
+  assertPublicHttpsUrl,
+  downloadToTemp,
+  isHttpUrl,
+  safeDownloadUrlIdentity,
+  writeUrlDownloadTelemetry,
+  type SafeDownloadUrlIdentity,
+  type UrlDownloadOptions,
+  type UrlDownloadTelemetry,
+} from "./utils/urlDownloader.js";
 export {
   runFfmpeg,
   formatFfmpegError,
