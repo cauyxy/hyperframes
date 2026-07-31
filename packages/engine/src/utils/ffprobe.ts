@@ -1,7 +1,7 @@
 // fallow-ignore-file code-duplication complexity
 import { spawn } from "child_process";
-import { readFileSync } from "fs";
-import { basename, extname } from "path";
+import { closeSync, openSync, readFileSync, readSync } from "fs";
+import { basename } from "path";
 import { redactTelemetryString } from "@hyperframes/core";
 import { FFPROBE_PATH_ENV, getFfprobeBinary } from "./ffmpegBinaries.js";
 import { ManagedChildProcess } from "./managedChildProcess.js";
@@ -92,6 +92,7 @@ function parseProbeJson(stdout: string): FFProbeOutput {
 
 const videoMetadataCache = new Map<string, Promise<VideoMetadata>>();
 const audioMetadataCache = new Map<string, Promise<AudioMetadata>>();
+const mediaProbeOutputCache = new Map<string, Promise<FFProbeOutput>>();
 // FFmpeg's built-in AAC encoder emits AAC-LC, which has 1024 samples per packet.
 const AAC_LC_SAMPLES_PER_PACKET = 1024;
 
@@ -149,11 +150,13 @@ interface FFProbeStream {
   color_primaries?: string;
   color_space?: string;
   tags?: Record<string, string>;
+  disposition?: { attached_pic?: number };
 }
 
 interface FFProbeFormat {
   duration?: string;
   bit_rate?: string;
+  format_name?: string;
 }
 
 interface FFProbeOutput {
@@ -165,6 +168,138 @@ interface StillImageMetadata {
   width: number;
   height: number;
   colorSpace: VideoColorSpace | null;
+}
+
+export interface MediaProbeProfile {
+  hasVideoStream: boolean;
+  hasAudioStream: boolean;
+  visualKind: "none" | "still" | "moving";
+}
+
+const STILL_IMAGE_DEMUXERS = new Set([
+  "apng",
+  "bmp_pipe",
+  "dds_pipe",
+  "dpx_pipe",
+  "exr_pipe",
+  "gif",
+  "ico",
+  "image2",
+  "image2pipe",
+  "jpeg_pipe",
+  "jxl_pipe",
+  "png_pipe",
+  "qdraw_pipe",
+  "sgi_pipe",
+  "svg_pipe",
+  "tiff_pipe",
+  "webp_pipe",
+]);
+
+function hasAvifFileBrand(filePath: string): boolean {
+  let fd: number | undefined;
+  try {
+    fd = openSync(filePath, "r");
+    const prefix = Buffer.alloc(4096);
+    const bytesRead = readSync(fd, prefix, 0, prefix.length, 0);
+    const bytes = prefix.subarray(0, bytesRead);
+    if (bytes.length < 16 || bytes.toString("ascii", 4, 8) !== "ftyp") return false;
+    const boxSize = bytes.readUInt32BE(0);
+    if (boxSize < 16 || boxSize > bytes.length) return false;
+    const avifBrands = new Set(["avif", "avis"]);
+    if (avifBrands.has(bytes.toString("ascii", 8, 12))) return true;
+    for (let offset = 16; offset + 4 <= boxSize; offset += 4) {
+      if (avifBrands.has(bytes.toString("ascii", offset, offset + 4))) return true;
+    }
+    return false;
+  } catch {
+    return false;
+  } finally {
+    if (fd !== undefined) closeSync(fd);
+  }
+}
+
+function isStillImageVisual(output: FFProbeOutput, filePath: string): boolean {
+  const formatNames = (output.format.format_name ?? "")
+    .split(",")
+    .map((name) => name.trim().toLowerCase())
+    .filter(Boolean);
+  return formatNames.some((name) => STILL_IMAGE_DEMUXERS.has(name)) || hasAvifFileBrand(filePath);
+}
+
+function isPngImageProbe(output: FFProbeOutput): boolean {
+  const formatNames = (output.format.format_name ?? "")
+    .split(",")
+    .map((name) => name.trim().toLowerCase());
+  return (
+    formatNames.includes("png_pipe") ||
+    output.streams.some(
+      (stream) => stream.codec_type === "video" && stream.codec_name?.toLowerCase() === "png",
+    )
+  );
+}
+
+async function probeMediaOutput(filePath: string, signal?: AbortSignal): Promise<FFProbeOutput> {
+  if (signal) {
+    const stdout = await runFfprobe(
+      filePath,
+      ["-print_format", "json", "-show_format", "-show_streams"],
+      signal,
+    );
+    return parseProbeJson(stdout);
+  }
+
+  const cached = mediaProbeOutputCache.get(filePath);
+  if (cached) return cached;
+  const promise = runFfprobe(filePath, [
+    "-print_format",
+    "json",
+    "-show_format",
+    "-show_streams",
+  ]).then(parseProbeJson);
+  mediaProbeOutputCache.set(filePath, promise);
+  promise.catch(() => {
+    if (mediaProbeOutputCache.get(filePath) === promise) {
+      mediaProbeOutputCache.delete(filePath);
+    }
+  });
+  return promise;
+}
+
+/**
+ * Probe stream capabilities without assuming the caller's element type.
+ * File extensions and HTTP MIME are deliberately ignored: extensionless
+ * assets and valid media served through generic CDN content types must work.
+ */
+export async function probeMediaProfile(
+  filePath: string,
+  options?: { signal?: AbortSignal },
+): Promise<MediaProbeProfile> {
+  try {
+    const output = await probeMediaOutput(filePath, options?.signal);
+    const videoStreams = output.streams.filter((stream) => stream.codec_type === "video");
+    const hasMovingVideoStream = videoStreams.some(
+      (stream) => stream.disposition?.attached_pic !== 1,
+    );
+    const isStillImage = videoStreams.length > 0 && isStillImageVisual(output, filePath);
+    if (isStillImage && isPngImageProbe(output) && !extractStillImageMetadata(filePath)) {
+      throw new Error("[FFmpeg] PNG input is structurally incomplete");
+    }
+    return {
+      hasVideoStream: videoStreams.length > 0,
+      hasAudioStream: output.streams.some((stream) => stream.codec_type === "audio"),
+      visualKind: isStillImage ? "still" : hasMovingVideoStream ? "moving" : "none",
+    };
+  } catch (error) {
+    // Preserve the PNG parser fallback used by extractMediaMetadata when the
+    // packaged ffprobe binary is unavailable. Signature parsing (not the file
+    // extension) keeps extensionless PNGs eligible for preflight.
+    const stillImage = extractStillImageMetadata(filePath);
+    if (stillImage) {
+      return { hasVideoStream: true, hasAudioStream: false, visualKind: "still" };
+    }
+    throw error;
+  }
 }
 
 function crc32(buf: Buffer): number {
@@ -197,6 +332,7 @@ export function extractPngMetadataFromBuffer(buf: Buffer): StillImageMetadata | 
   let width = 0;
   let height = 0;
   let seenIdat = false;
+  let seenIend = false;
   let colorSpaceFromCicp: VideoColorSpace | null = null;
   let pos = 8;
   while (pos + 12 <= buf.length) {
@@ -242,16 +378,19 @@ export function extractPngMetadataFromBuffer(buf: Buffer): StillImageMetadata | 
       };
     }
 
-    if (chunkType === "IEND") break;
+    if (chunkType === "IEND") {
+      seenIend = true;
+      break;
+    }
     pos += 12 + chunkLen;
   }
 
-  return width > 0 && height > 0 ? { width, height, colorSpace: colorSpaceFromCicp } : null;
+  return width > 0 && height > 0 && seenIdat && seenIend
+    ? { width, height, colorSpace: colorSpaceFromCicp }
+    : null;
 }
 
 function extractStillImageMetadata(filePath: string): StillImageMetadata | null {
-  if (extname(filePath).toLowerCase() !== ".png") return null;
-
   try {
     return extractPngMetadataFromBuffer(readFileSync(filePath));
   } catch {
@@ -305,13 +444,7 @@ export async function extractMediaMetadata(filePath: string): Promise<VideoMetad
 
     let output: FFProbeOutput | null = null;
     try {
-      const stdout = await runFfprobe(filePath, [
-        "-print_format",
-        "json",
-        "-show_format",
-        "-show_streams",
-      ]);
-      output = parseProbeJson(stdout);
+      output = await probeMediaOutput(filePath);
     } catch (error) {
       if (!stillImageMeta) throw error;
     }
@@ -399,12 +532,7 @@ export async function extractAudioMetadata(
   if (cached) return cached;
 
   const probePromise = (async (): Promise<AudioMetadata> => {
-    const stdout = await runFfprobe(
-      filePath,
-      ["-print_format", "json", "-show_format", "-show_streams"],
-      options?.signal,
-    );
-    const output = parseProbeJson(stdout);
+    const output = await probeMediaOutput(filePath, options?.signal);
     const audioStream = output.streams.find((s) => s.codec_type === "audio");
     if (!audioStream) throw new Error("[FFmpeg] No audio stream found");
 
