@@ -179,6 +179,7 @@ export {
   parseImageElements,
   extractVideoFramesRange,
   extractAllVideoFrames,
+  extractionFrameCountForDuration,
   resolveProjectRelativeSrc,
   getFrameAtTime,
   createFrameLookupTable,
