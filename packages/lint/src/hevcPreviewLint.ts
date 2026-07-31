@@ -55,6 +55,7 @@ async function probeIsHevc(ffprobePath: string, filePath: string): Promise<boole
       "stream=codec_name",
       "-of",
       "json",
+      "--",
       filePath,
     ]);
     return hasHevcStream(JSON.parse(stdout));
