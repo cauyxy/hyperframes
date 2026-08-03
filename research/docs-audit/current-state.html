@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>HyperFrames docs — system review</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        background: #09090b;
+        color: #f4f4f5;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background:
+          radial-gradient(circle at 82% 0%, rgba(132, 204, 22, 0.12), transparent 32rem), #09090b;
+      }
+      main {
+        width: min(1160px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 64px 0 80px;
+      }
+      .eyebrow,
+      .status {
+        font:
+          700 12px/1.2 ui-monospace,
+          monospace;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+      .eyebrow {
+        color: #a3e635;
+      }
+      h1 {
+        max-width: 850px;
+        margin: 14px 0 18px;
+        font-size: clamp(42px, 7vw, 76px);
+        line-height: 0.98;
+        letter-spacing: -0.055em;
+      }
+      .lede {
+        max-width: 790px;
+        color: #a1a1aa;
+        font-size: 19px;
+        line-height: 1.6;
+      }
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+        margin: 40px 0;
+      }
+      .card,
+      section {
+        border: 1px solid #27272a;
+        border-radius: 18px;
+        background: rgba(24, 24, 27, 0.78);
+      }
+      .card {
+        padding: 22px;
+      }
+      .metric {
+        font-size: 38px;
+        font-weight: 760;
+        letter-spacing: -0.04em;
+      }
+      .label,
+      .muted {
+        color: #a1a1aa;
+      }
+      .label {
+        margin-top: 4px;
+        font-size: 14px;
+      }
+      section {
+        margin-top: 16px;
+        padding: 28px;
+      }
+      h2 {
+        margin: 0 0 8px;
+        font-size: 23px;
+        letter-spacing: -0.025em;
+      }
+      section > p {
+        max-width: 780px;
+        margin: 0 0 20px;
+        line-height: 1.6;
+      }
+      .rows {
+        display: grid;
+        gap: 1px;
+        overflow: hidden;
+        border: 1px solid #27272a;
+        border-radius: 12px;
+        background: #27272a;
+      }
+      .row {
+        display: grid;
+        grid-template-columns: 170px minmax(0, 1fr) 112px;
+        gap: 18px;
+        align-items: start;
+        padding: 16px;
+        background: #111113;
+      }
+      .row strong {
+        color: #e4e4e7;
+      }
+      .row span:not(.status) {
+        color: #a1a1aa;
+        line-height: 1.5;
+      }
+      .status {
+        justify-self: end;
+        padding-top: 2px;
+      }
+      .good {
+        color: #bef264;
+      }
+      .working {
+        color: #facc15;
+      }
+      .blocked {
+        color: #fb7185;
+      }
+      ul {
+        margin: 0;
+        padding-left: 20px;
+        color: #d4d4d8;
+        line-height: 1.75;
+      }
+      .rule {
+        display: grid;
+        grid-template-columns: 180px 1fr;
+        gap: 18px;
+        padding: 14px 0;
+        border-top: 1px solid #27272a;
+      }
+      .rule:first-of-type {
+        border-top: 0;
+      }
+      .rule strong {
+        color: #e4e4e7;
+      }
+      .rule span {
+        color: #a1a1aa;
+        line-height: 1.5;
+      }
+      footer {
+        margin-top: 24px;
+        color: #71717a;
+        font-size: 13px;
+      }
+      @media (max-width: 760px) {
+        main {
+          padding-top: 40px;
+        }
+        .metrics {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .row,
+        .rule {
+          grid-template-columns: 1fr;
+          gap: 7px;
+        }
+        .status {
+          justify-self: start;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="eyebrow">Documentation refactor · honest current state</div>
+      <h1>The local documentation system and its final quality gate are complete.</h1>
+      <p class="lede">
+        HyperFrames now has four canonical journeys and a coherent Guides, Studio, Catalog, and
+        Developers system. Every focused visual gap now uses the real product or a real render. The
+        local desktop, mobile, Mintlify, link, and media gates pass. The remaining work is specific:
+        publish the staged Catalog media repairs and complete owner review before any commit or
+        push.
+      </p>
+
+      <div class="metrics">
+        <div class="card">
+          <div class="metric">273</div>
+          <div class="label">navigated destinations</div>
+        </div>
+        <div class="card">
+          <div class="metric">4</div>
+          <div class="label">canonical journeys</div>
+        </div>
+        <div class="card">
+          <div class="metric">138</div>
+          <div class="label">Catalog items audited</div>
+        </div>
+        <div class="card">
+          <div class="metric">546</div>
+          <div class="label">clean rendered-page checks</div>
+        </div>
+      </div>
+
+      <section>
+        <h2>System status</h2>
+        <p class="muted">No section is marked complete merely because its navigation exists.</p>
+        <div class="rows">
+          <div class="row">
+            <strong>Four journeys</strong>
+            <span
+              >What HyperFrames is, the first video, deeper control, and developer integration each
+              have a distinct page, film, written continuation, and next action.</span
+            >
+            <span class="status good">Sound</span>
+          </div>
+          <div class="row">
+            <strong>Guides</strong>
+            <span
+              >Workflow pages finish real tasks. The five exact media proofs are complete, and
+              inaccurate source-replacement and transcription claims were corrected. Prompt Guide
+              remains frozen by owner decision.</span
+            >
+            <span class="status good">Sound</span>
+          </div>
+          <div class="row">
+            <strong>Studio</strong>
+            <span
+              >Thirteen task-led pages replace overlapping micro-pages. Animation and Assets now use
+              compact current-product loops whose project mutations were verified.</span
+            >
+            <span class="status good">Sound</span>
+          </div>
+          <div class="row">
+            <strong>Developers</strong>
+            <span
+              >The journey, architecture overview, CLI, SDK, Player, schema, rendering layers, and
+              deployment now have separate jobs. Technical proof is code and verified output, not
+              generic marketing video.</span
+            >
+            <span class="status good">Sound</span>
+          </div>
+          <div class="row">
+            <strong>Catalog</strong>
+            <span
+              >The repeatable gate passes 119 of 138 published items. Fourteen missing objects and
+              two weak posters are repaired locally; three remaining flags are reviewed false
+              positives.</span
+            >
+            <span class="status blocked">Upload blocked</span>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>What a page must earn</h2>
+        <p class="muted">Every route is judged by the reader’s job, not by its word count.</p>
+        <div class="rule">
+          <strong>Journey</strong>
+          <span
+            >Orient, prove the result, explain the mental model, and offer one dominant next
+            action.</span
+          >
+        </div>
+        <div class="rule">
+          <strong>Task guide</strong>
+          <span>Let a reader finish one real job without an unnecessary intermediate click.</span>
+        </div>
+        <div class="rule">
+          <strong>Concept</strong>
+          <span>Explain a model or boundary that makes later decisions easier.</span>
+        </div>
+        <div class="rule">
+          <strong>Reference</strong>
+          <span
+            >Make exact commands, contracts, options, and behavior easy to find and verify.</span
+          >
+        </div>
+        <div class="rule">
+          <strong>Router</strong>
+          <span
+            >Exist only when choosing is itself the reader’s task; never repeat the sidebar as
+            cards.</span
+          >
+        </div>
+      </section>
+
+      <section>
+        <h2>Visual rule</h2>
+        <ul>
+          <li>A complete outcome or journey earns a narrated film with controls.</li>
+          <li>One visible interaction earns a compact muted loop from the current product.</li>
+          <li>A transformation earns a same-source before/after, not two unrelated examples.</li>
+          <li>A stable UI location earns one current screenshot.</li>
+          <li>Commands and schemas earn copyable verified code, not decorative video.</li>
+          <li>
+            Troubleshooting earns exact symptoms and output. Many pages correctly need no visual.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>What external teaching changes</h2>
+        <ul>
+          <li>
+            Lead with the viewer’s job and a real result before setup or renderer architecture.
+          </li>
+          <li>Follow one artifact from request through a correction to the finished file.</li>
+          <li>Promise a playable first version, not one-shot perfection.</li>
+          <li>Teach brand and motion direction before piling on more feature vocabulary.</li>
+          <li>
+            Distinguish local HyperFrames from hosted HeyGen by the artifact and control the user
+            receives; Video Agent can now use HyperFrames motion graphics internally.
+          </li>
+          <li>
+            Do not copy third-party “zero setup,” “pixel-perfect every time,” or stale CLI claims.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Next concrete work</h2>
+        <ul>
+          <li>Publish staged Catalog media when AWS credentials are available in this shell.</li>
+          <li>
+            Preserve the clean final gate: 273 routes at desktop and 390 px, with zero findings.
+          </li>
+          <li>Complete owner review before any commit or push.</li>
+        </ul>
+      </section>
+
+      <footer>Current implementation state · 2026-08-01 · no commit or push made</footer>
+    </main>
+  </body>
+</html>

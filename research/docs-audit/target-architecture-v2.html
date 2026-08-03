@@ -1,0 +1,754 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>HyperFrames docs — target system</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        background: #080808;
+        color: #f4f4f2;
+        --panel: rgba(20, 20, 20, 0.86);
+        --panel-2: #111;
+        --line: #30302d;
+        --muted: #aaa9a2;
+        --acid: #d8ff3e;
+        --warm: #ffbd7a;
+        --blue: #8dd9ff;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        margin: 0;
+        background:
+          radial-gradient(circle at 80% -10%, rgba(216, 255, 62, 0.14), transparent 28rem),
+          radial-gradient(circle at -10% 35%, rgba(141, 217, 255, 0.08), transparent 30rem), #080808;
+      }
+      main {
+        width: min(1180px, calc(100% - 32px));
+        margin: auto;
+        padding: 64px 0 96px;
+      }
+      .eyebrow {
+        color: var(--acid);
+        font:
+          700 12px/1.2 ui-monospace,
+          monospace;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+      h1 {
+        max-width: 900px;
+        margin: 16px 0 20px;
+        font-size: clamp(44px, 7vw, 82px);
+        line-height: 0.96;
+        letter-spacing: -0.06em;
+      }
+      .lede {
+        max-width: 770px;
+        color: var(--muted);
+        font-size: 20px;
+        line-height: 1.55;
+      }
+      .metrics,
+      .types,
+      .media-grid {
+        display: grid;
+        gap: 12px;
+      }
+      .metrics {
+        grid-template-columns: repeat(4, 1fr);
+        margin: 38px 0 16px;
+      }
+      .metric,
+      section,
+      .tab,
+      .type,
+      .media-card {
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: var(--panel);
+      }
+      .metric {
+        padding: 22px;
+      }
+      .metric b {
+        display: block;
+        font-size: 38px;
+        letter-spacing: -0.045em;
+      }
+      .metric span {
+        color: var(--muted);
+        font-size: 13px;
+      }
+      section {
+        margin-top: 16px;
+        padding: 30px;
+      }
+      h2 {
+        margin: 0 0 10px;
+        font-size: 27px;
+        letter-spacing: -0.035em;
+      }
+      h3 {
+        margin: 0 0 10px;
+        font-size: 17px;
+        letter-spacing: -0.015em;
+      }
+      p {
+        line-height: 1.6;
+      }
+      .section-intro {
+        max-width: 760px;
+        margin: 0 0 24px;
+        color: var(--muted);
+      }
+      .loop {
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 1px;
+        overflow: hidden;
+        margin-top: 24px;
+        border: 1px solid var(--line);
+        border-radius: 15px;
+        background: var(--line);
+      }
+      .loop div {
+        min-height: 112px;
+        padding: 16px;
+        background: var(--panel-2);
+      }
+      .loop b {
+        display: block;
+        color: var(--acid);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+      .loop span {
+        display: block;
+        margin-top: 9px;
+        color: #deded8;
+        font-size: 14px;
+        line-height: 1.4;
+      }
+      .arrow {
+        color: #64645f !important;
+      }
+      .current {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+      .problem {
+        padding: 18px;
+        border-left: 2px solid var(--warm);
+        background: #121110;
+        border-radius: 0 12px 12px 0;
+      }
+      .problem b {
+        display: block;
+        margin-bottom: 7px;
+      }
+      .problem span {
+        color: var(--muted);
+        line-height: 1.5;
+        font-size: 14px;
+      }
+      .tabs {
+        display: grid;
+        grid-template-columns: 1.05fr 0.95fr 0.95fr 1.1fr;
+        gap: 12px;
+      }
+      .tab {
+        overflow: hidden;
+      }
+      .tab-head {
+        padding: 18px;
+        border-bottom: 1px solid var(--line);
+      }
+      .tab-head small {
+        display: block;
+        margin-top: 5px;
+        color: var(--muted);
+      }
+      .groups {
+        display: grid;
+        gap: 1px;
+        background: var(--line);
+      }
+      .group {
+        padding: 14px 16px;
+        background: var(--panel-2);
+      }
+      .group b {
+        display: block;
+        font-size: 14px;
+      }
+      .group span {
+        display: block;
+        margin-top: 5px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+      .types {
+        grid-template-columns: repeat(4, 1fr);
+      }
+      .type {
+        padding: 18px;
+        background: var(--panel-2);
+      }
+      .type small {
+        color: var(--acid);
+        font:
+          700 11px/1.2 ui-monospace,
+          monospace;
+        text-transform: uppercase;
+      }
+      .type p {
+        margin: 9px 0 0;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .decisions {
+        display: grid;
+        gap: 1px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--line);
+      }
+      .decision {
+        display: grid;
+        grid-template-columns: 180px 1fr 110px;
+        gap: 18px;
+        align-items: center;
+        padding: 16px;
+        background: var(--panel-2);
+      }
+      .decision span {
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.45;
+      }
+      .action {
+        justify-self: end;
+        color: var(--acid) !important;
+        font:
+          700 11px/1 ui-monospace,
+          monospace;
+        text-transform: uppercase;
+      }
+      .media-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+      .media-card {
+        padding: 19px;
+        background: var(--panel-2);
+      }
+      .frame {
+        aspect-ratio: 16 / 9;
+        display: grid;
+        place-items: center;
+        margin-bottom: 14px;
+        border: 1px solid #3c3c37;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #1d1e18, #0d0d0d);
+        color: #76766f;
+        font:
+          700 11px/1 ui-monospace,
+          monospace;
+        text-transform: uppercase;
+      }
+      .frame.compact {
+        width: 68%;
+      }
+      .frame.portrait {
+        aspect-ratio: 9 / 14;
+        width: 42%;
+        max-height: 190px;
+      }
+      .media-card p {
+        margin: 8px 0 0;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .phases {
+        counter-reset: phase;
+        display: grid;
+        gap: 10px;
+      }
+      .phase {
+        counter-increment: phase;
+        display: grid;
+        grid-template-columns: 42px 1fr;
+        gap: 14px;
+        align-items: start;
+        padding: 14px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--panel-2);
+      }
+      .phase::before {
+        content: counter(phase);
+        display: grid;
+        place-items: center;
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        background: var(--acid);
+        color: #080808;
+        font-weight: 800;
+      }
+      .phase span {
+        color: var(--muted);
+        font-size: 14px;
+      }
+      .sources {
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .sources a {
+        color: #deded8;
+      }
+      footer {
+        margin-top: 22px;
+        color: #75756f;
+        font-size: 12px;
+      }
+      @media (max-width: 900px) {
+        .tabs,
+        .types {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .loop {
+          grid-template-columns: repeat(3, 1fr);
+        }
+      }
+      @media (max-width: 620px) {
+        main {
+          padding-top: 38px;
+        }
+        .metrics,
+        .tabs,
+        .types,
+        .media-grid,
+        .current {
+          grid-template-columns: 1fr;
+        }
+        .loop {
+          grid-template-columns: 1fr;
+        }
+        .decision {
+          grid-template-columns: 1fr;
+          gap: 7px;
+        }
+        .action {
+          justify-self: start;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="eyebrow">Architecture proposal · 31 July 2026</div>
+      <h1>Docs as a product, not a folder.</h1>
+      <p class="lede">
+        Every route gets one job, every visual earns its space, and the structure follows how people
+        actually create, edit, render, and build with HyperFrames.
+      </p>
+
+      <div class="metrics">
+        <div class="metric"><b>280</b><span>current navigated routes</span></div>
+        <div class="metric"><b>142</b><span>non-Catalog pages opened in Mintlify</span></div>
+        <div class="metric"><b>119+</b><span>unique non-Catalog video sources to verify</span></div>
+        <div class="metric"><b>4</b><span>canonical user journeys</span></div>
+      </div>
+
+      <section>
+        <h2>The real product loop</h2>
+        <p class="section-intro">
+          The docs should teach this human loop first. Package architecture appears only when a
+          developer needs it.
+        </p>
+        <div class="loop">
+          <div><b>1 · Intent</b><span>Request, URL, PR, footage, music, or design</span></div>
+          <div><b>2 · Agent</b><span>Skills choose a workflow and create direction</span></div>
+          <div><b>3 · Project</b><span>Editable HTML, media, timing, and assets</span></div>
+          <div><b>4 · Control</b><span>Agent, Studio, CLI, or source code</span></div>
+          <div><b>5 · Verify</b><span>Preview, lint, check, and review</span></div>
+          <div><b>6 · Deliver</b><span>Video, deck, embed, render, or reusable source</span></div>
+        </div>
+      </section>
+
+      <section>
+        <h2>What is broken now</h2>
+        <p class="section-intro">
+          Not “too many words” or “too few words” by itself. The system often gives different kinds
+          of information the same shape.
+        </p>
+        <div class="current">
+          <div class="problem">
+            <b>Router chains</b
+            ><span
+              >Several pages only introduce another set of links, so a reader clicks two or three
+              times before reaching the answer.</span
+            >
+          </div>
+          <div class="problem">
+            <b>Micro-pages without a result</b
+            ><span
+              >Some Studio pages describe a panel in roughly one screen but do not show a real task,
+              expected result, or recovery.</span
+            >
+          </div>
+          <div class="problem">
+            <b>Mixed content modes</b
+            ><span
+              >Tutorials, how-tos, concepts, and references are written and judged as if they were
+              the same thing.</span
+            >
+          </div>
+          <div class="problem">
+            <b>Uncontrolled media</b
+            ><span
+              >Portrait clips, complete films, and tiny UI loops share similar dimensions and
+              playback behavior.</span
+            >
+          </div>
+          <div class="problem">
+            <b>Duplicate teaching</b
+            ><span
+              >Workflows and Prompt Guide sometimes explain the same creation path instead of having
+              separate jobs.</span
+            >
+          </div>
+          <div class="problem">
+            <b>Repository-shaped depth</b
+            ><span
+              >Developer pages expose package boundaries before helping someone choose the smallest
+              useful technical surface.</span
+            >
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>Target navigation</h2>
+        <p class="section-intro">
+          Keep the approved Mintlify chrome and four header tabs. Change what each section promises
+          and how pages inside it are composed.
+        </p>
+        <div class="tabs">
+          <article class="tab">
+            <div class="tab-head">
+              <h3>Guides</h3>
+              <small>Learn and complete real creator tasks</small>
+            </div>
+            <div class="groups">
+              <div class="group"><b>Start here</b><span>Four canonical journeys</span></div>
+              <div class="group">
+                <b>Create with an agent</b><span>Setup, project loop, designs</span>
+              </div>
+              <div class="group">
+                <b>Prompt Guide</b
+                ><span>Preserve levels; remove duplication and hidden content</span>
+              </div>
+              <div class="group">
+                <b>Workflows</b><span>Eight distinct inputs and outcomes</span>
+              </div>
+              <div class="group">
+                <b>Projects and media</b><span>Mental model, media, audio, effects</span>
+              </div>
+              <div class="group">
+                <b>Finish and share</b><span>One complete finishing path</span>
+              </div>
+              <div class="group">
+                <b>Examples · Help · What's new</b><span>Proof, recovery, changes</span>
+              </div>
+            </div>
+          </article>
+          <article class="tab">
+            <div class="tab-head">
+              <h3>Studio</h3>
+              <small>Thirteen complete editing jobs</small>
+            </div>
+            <div class="groups">
+              <div class="group">
+                <b>Overview and review</b><span>Tour, storyboard, feedback</span>
+              </div>
+              <div class="group"><b>Edit the frame</b><span>Canvas + Layers + Design</span></div>
+              <div class="group">
+                <b>Timing and motion</b><span>Timeline + Animation + keyframes</span>
+              </div>
+              <div class="group">
+                <b>Build</b><span>Assets, captions, variables, slideshows</span>
+              </div>
+              <div class="group"><b>Work with the agent</b><span>Source, lint, handoff</span></div>
+              <div class="group"><b>Finish</b><span>Export, shortcuts, troubleshooting</span></div>
+            </div>
+          </article>
+          <article class="tab">
+            <div class="tab-head">
+              <h3>Catalog</h3>
+              <small>Find, judge, and install</small>
+            </div>
+            <div class="groups">
+              <div class="group">
+                <b>Visual finder</b><span>Search and meaningful filters</span>
+              </div>
+              <div class="group"><b>Blocks</b><span>Scenes, overlays, charts, maps, UI</span></div>
+              <div class="group"><b>Transitions</b><span>Shader and CSS movement</span></div>
+              <div class="group"><b>Components</b><span>Captions and effects</span></div>
+              <div class="group"><b>Install</b><span>Studio and CLI paths</span></div>
+              <div class="group">
+                <b>Generated item pages</b><span>Compact, visual, precise</span>
+              </div>
+            </div>
+          </article>
+          <article class="tab">
+            <div class="tab-head">
+              <h3>Developers</h3>
+              <small>Build the smallest useful integration</small>
+            </div>
+            <div class="groups">
+              <div class="group">
+                <b>Start building</b><span>CLI, SDK, Player, schema, rendering</span>
+              </div>
+              <div class="group">
+                <b>Command line</b><span>Task entry + exhaustive reference</span>
+              </div>
+              <div class="group">
+                <b>SDK and playback</b><span>Edit, embed, seek, persist</span>
+              </div>
+              <div class="group"><b>Composition</b><span>Schema, animation, determinism</span></div>
+              <div class="group"><b>Render and deploy</b><span>Local, cloud, AWS, GCP</span></div>
+              <div class="group">
+                <b>Packages · Integrations · Contributing</b><span>Deep reference last</span>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section>
+        <h2>Every page declares its type</h2>
+        <p class="section-intro">
+          A page is judged by whether it completes its own job, not by a universal word count.
+        </p>
+        <div class="types">
+          <div class="type">
+            <small>Journey</small>
+            <h3>Orient end to end</h3>
+            <p>Film, concise written path, one dominant next action. Only four routes.</p>
+          </div>
+          <div class="type">
+            <small>Tutorial</small>
+            <h3>Learn through a project</h3>
+            <p>One real example, visible checkpoints, finished outcome, recovery.</p>
+          </div>
+          <div class="type">
+            <small>How-to</small>
+            <h3>Complete one task</h3>
+            <p>Minimum steps, expected result, compact proof, common pain point.</p>
+          </div>
+          <div class="type">
+            <small>Explanation</small>
+            <h3>Understand a model</h3>
+            <p>One clear claim, diagram or example, why the distinction matters.</p>
+          </div>
+          <div class="type">
+            <small>Reference</small>
+            <h3>Look up exact facts</h3>
+            <p>Scannable and complete. Length is allowed; narrative video is not.</p>
+          </div>
+          <div class="type">
+            <small>Router</small>
+            <h3>Choose deliberately</h3>
+            <p>Only at major entrances. Teaches the difference; never just a card wall.</p>
+          </div>
+          <div class="type">
+            <small>Troubleshooting</small>
+            <h3>Return to the task</h3>
+            <p>Symptom → cause → smallest fix → verification → escalation.</p>
+          </div>
+          <div class="type">
+            <small>Catalog item</small>
+            <h3>Judge and reuse</h3>
+            <p>Truthful preview, best use, install contract, options, source.</p>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>Highest-value consolidations</h2>
+        <p class="section-intro">
+          These remove click-through without turning everything into giant pages.
+        </p>
+        <div class="decisions">
+          <div class="decision">
+            <b>Canvas + Layers + Design</b
+            ><span>They are one direct-manipulation workflow around a selected element.</span
+            ><span class="action">Merge</span>
+          </div>
+          <div class="decision">
+            <b>Animation + Keyframes</b
+            ><span>Keep the Studio task together; move runtime/schema contracts to Developers.</span
+            ><span class="action">Merge + split</span>
+          </div>
+          <div class="decision">
+            <b>Concepts + Project Tour</b
+            ><span>Create one human mental model; preserve precise attributes as reference.</span
+            ><span class="action">Merge + split</span>
+          </div>
+          <div class="decision">
+            <b>Quality + Render + Share</b
+            ><span>They form one normal finishing sequence for creators.</span
+            ><span class="action">Merge</span>
+          </div>
+          <div class="decision">
+            <b>Workflow vs Prompt Guide</b
+            ><span
+              >Workflow owns the production path. Prompt Guide owns how wording changes the
+              result.</span
+            ><span class="action">De-duplicate</span>
+          </div>
+          <div class="decision">
+            <b>CLI / SDK / Catalog reference</b
+            ><span
+              >Lookup pages have real jobs; do not merge them merely because they are long or
+              short.</span
+            ><span class="action">Keep</span>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>Media grammar</h2>
+        <p class="section-intro">
+          A video is useful only when it communicates motion, interaction, workflow, or a complex
+          visual idea faster than text.
+        </p>
+        <div class="media-grid">
+          <div class="media-card">
+            <div class="frame">Journey film · 16:9</div>
+            <h3>Complete film</h3>
+            <p>
+              Full content width. Controls. No autoplay or loop. Narration, BGM, SFX, captions, and
+              transcript.
+            </p>
+          </div>
+          <div class="media-card">
+            <div class="frame compact">UI proof loop</div>
+            <h3>Compact demonstration</h3>
+            <p>One or two columns. Autoplay muted loop. No controls. Usually 8–20 seconds.</p>
+          </div>
+          <div class="media-card">
+            <div class="frame portrait">Portrait</div>
+            <h3>Constrained format</h3>
+            <p>
+              Centered and height-capped. It never consumes multiple viewports merely because its
+              source is vertical.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>Implementation, after approval</h2>
+        <p class="section-intro">
+          No more “all done” because routes open. Each phase ends with a concrete browser preview
+          and quality report.
+        </p>
+        <div class="phases">
+          <div class="phase">
+            <div>
+              <h3>Approve the system</h3>
+              <span>Navigation, page types, merge rules, and media grammar.</span>
+            </div>
+          </div>
+          <div class="phase">
+            <div>
+              <h3>Complete the route ledger</h3>
+              <span
+                >Every non-Catalog route gets keep, expand, merge, split, redirect, or remove.</span
+              >
+            </div>
+          </div>
+          <div class="phase">
+            <div>
+              <h3>Fix the main journeys and router chains</h3>
+              <span>Front doors become complete pages, not collections of destinations.</span>
+            </div>
+          </div>
+          <div class="phase">
+            <div>
+              <h3>Consolidate Studio and finishing</h3>
+              <span>Real tasks, current visuals, stable redirects, no empty micro-pages.</span>
+            </div>
+          </div>
+          <div class="phase">
+            <div>
+              <h3>Recompose Prompt Guide and Developers</h3>
+              <span>Separate teaching from reference and remove duplicated explanations.</span>
+            </div>
+          </div>
+          <div class="phase">
+            <div>
+              <h3>Watch and classify every video</h3>
+              <span>Keep, replace, resize, or remove after end-to-end review at docs width.</span>
+            </div>
+          </div>
+          <div class="phase">
+            <div>
+              <h3>Ship only after full QA</h3>
+              <span
+                >Facts, editorial quality, desktop/mobile, accessibility, links, commands, and
+                media.</span
+              >
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="sources">
+        <h2>Principles used</h2>
+        <p>
+          Grounded in <a href="https://diataxis.fr/">Diátaxis</a>,
+          <a href="https://www.mintlify.com/docs/organize/navigation"
+            >Mintlify navigation guidance</a
+          >,
+          <a
+            href="https://docs.github.com/en/contributing/style-guide-and-content-model/how-to-content-type"
+            >GitHub's content model</a
+          >, <a href="https://developers.google.com/style/procedures">Google procedure guidance</a>,
+          and
+          <a
+            href="https://developers.cloudflare.com/style-guide/how-we-docs/how-we-video/why-and-when-we-use-videos/"
+            >Cloudflare's video criteria</a
+          >. The resulting system is adapted to HyperFrames rather than copied from any one
+          framework.
+        </p>
+      </section>
+
+      <footer>
+        Architecture proposal only. No broad documentation rewrite was made as part of this
+        artifact.
+      </footer>
+    </main>
+  </body>
+</html>

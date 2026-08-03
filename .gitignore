@@ -22,6 +22,21 @@ Thumbs.db
 # with `bun run upload:docs-images`. Add explicit negations below for any
 # non-generated assets (logos, svgs) that should stay in the repo.
 docs/images/
+!docs/images/
+docs/images/*
+!docs/images/studio/
+!docs/images/studio/*.jpg
+# Focused current-product screenshots used by the Studio task guides.
+!docs/images/studio-variables-panel-v1.jpg
+!docs/images/studio-captions-panel-v1.jpg
+!docs/images/studio-slideshow-panel-v1.jpg
+# The introduction's explainer film. Not a generated preview: it is authored, it
+# is the page's whole argument, and at 332KB silent it costs less than one
+# catalog preview. Committed so the page cannot break when a CDN credential
+# expires. The version with its music bed lives on the CDN instead.
+!docs/images/showcase/
+!docs/images/showcase/*.mp4
+!docs/images/showcase/*.jpg
 
 videos/
 
@@ -83,6 +98,10 @@ docs/plans/
 # Local proof / test artifacts
 qa-artifacts/
 my-video/
+research/docs-refactor/current-page-inventory.json
+research/docs-refactor/rendered-docs-qa.json
+research/docs-refactor/catalog-media-qa/*.jpg
+research/docs-refactor/catalog-media-qa/report.json
 # Studio project state (hf-id backups, per-file state) — always runtime-generated,
 # never committed. Broadened from .hyperframes/backup/ after preview-generated state
 # leaked into a fixture commit.

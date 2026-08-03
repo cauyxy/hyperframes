@@ -51,6 +51,9 @@
     "test:skills": "node --test 'skills/**/*.test.mjs'",
     "generate:previews": "tsx scripts/generate-template-previews.ts",
     "generate:catalog-previews": "tsx scripts/generate-catalog-previews.ts",
+    "docs:inventory": "node research/docs-refactor/build-current-page-inventory.mjs",
+    "docs:audit": "node research/docs-refactor/build-current-page-inventory.mjs && node research/docs-refactor/audit-rendered-docs.mjs",
+    "docs:audit-catalog": "node research/docs-refactor/audit-catalog-media.mjs",
     "package:codex-plugin": "node scripts/package-codex-plugin.mjs",
     "upload:docs-images": "bash scripts/upload-docs-images.sh",
     "prepare": "test -d .git && lefthook install || true",
@@ -68,6 +71,8 @@
     "lefthook": "^2.1.4",
     "oxfmt": "^0.41.0",
     "oxlint": "^1.56.0",
+    "playwright": "^1.62.1",
+    "sharp": "^0.35.3",
     "tsx": "^4.21.0",
     "typescript": "^5.0.0",
     "yaml": "^2.9.0"
