@@ -43,7 +43,7 @@ video experience.
 - Mintlify validation: **passed**
 - Broken links: **passed**
 - Journey/front-door films: **reviewed end to end at the real docs width**
-- PRs: **TBD**
+- PRs: **[#2961](https://github.com/heygen-com/hyperframes/pull/2961) → [#2962](https://github.com/heygen-com/hyperframes/pull/2962) → [#2963](https://github.com/heygen-com/hyperframes/pull/2963) → [#2964](https://github.com/heygen-com/hyperframes/pull/2964)**
 
 ## Review ask
 

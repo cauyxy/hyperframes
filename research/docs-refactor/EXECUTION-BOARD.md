@@ -21,7 +21,7 @@ decision, or risk changes.
       findings.
 - [x] Mintlify validation and broken-link checks pass on the final tree.
 - [x] Final owner-facing editorial, factual, and visual pass is complete.
-- [ ] Changes are separated into 2–4 reviewable PRs.
+- [x] Changes are separated into four reviewable stacked PRs.
 - [ ] Slack review request is sent.
 - [x] Standup walkthrough is ready; PR links remain to be inserted.
 
@@ -87,11 +87,18 @@ moved to the immutable CDN later with a one-line URL change.
 
 ### 08:00–09:15 — PR construction
 
-- [ ] Rebase/sync each PR branch from current remote main.
-- [ ] Split the checkpoint into coherent commits and 2–4 small PRs.
-- [ ] Give each PR one purpose, clear screenshots/evidence, and its own test
+- [x] Rebase/sync each PR branch from current remote main.
+- [x] Split the checkpoint into four coherent stacked PRs.
+- [x] Give each PR one purpose, clear evidence, and its own test
       report.
-- [ ] Open as draft until its individual gates pass, then mark ready.
+- [x] Open each PR as draft after its individual local gates pass.
+
+Review order:
+
+1. [#2961 — journeys, Guides, and Studio](https://github.com/heygen-com/hyperframes/pull/2961)
+2. [#2962 — developer and rendering reference](https://github.com/heygen-com/hyperframes/pull/2962)
+3. [#2963 — Catalog presentation](https://github.com/heygen-com/hyperframes/pull/2963)
+4. [#2964 — documentation quality system](https://github.com/heygen-com/hyperframes/pull/2964)
 
 ### 09:15–10:00 — review handoff
 
