@@ -17,7 +17,7 @@ decision, or risk changes.
 - [x] Large docs MP4 files routed through Git LFS.
 - [x] Durable worktree created outside temporary storage.
 - [x] Existing four-journey architecture and Mintlify chrome preserved.
-- [x] Current rendered crawl: 276 routes × desktop/mobile = 552 checks, zero
+- [x] Current rendered crawl: 306 routes × desktop/mobile = 612 checks, zero
       findings.
 - [x] Mintlify validation and broken-link checks pass on the final tree.
 - [x] Final owner-facing editorial, factual, and visual pass is complete.
@@ -79,7 +79,7 @@ moved to the immutable CDN later with a one-line URL change.
 
 ### 06:30–08:00 — rendered QA
 
-- [x] Mintlify desktop and 390px review of all 276 navigated routes.
+- [x] Mintlify desktop and 390px review of all 306 navigated routes.
 - [x] Full route crawl, accessibility checks, overflow checks, and autoplay
       audio checks.
 - [x] Mintlify validation, broken links, formatting, lint, and diff checks.

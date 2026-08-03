@@ -38,8 +38,8 @@ video experience.
 
 ## Verification to show
 
-- Final route count: **276 navigated routes**
-- Desktop/mobile rendered checks: **552, with zero findings**
+- Final route count: **306 navigated routes**
+- Desktop/mobile rendered checks: **612, with zero findings**
 - Mintlify validation: **passed**
 - Broken links: **passed**
 - Journey/front-door films: **reviewed end to end at the real docs width**

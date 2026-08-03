@@ -6,9 +6,9 @@ This is a measurement layer, not an editorial verdict. A short page is not autom
 
 ## Summary
 
-- Navigated destinations: **276**
-- Documentation source files: **277**
-- Pages with at least one visual or interactive element: **204**
+- Navigated destinations: **306**
+- Documentation source files: **307**
+- Pages with at least one visual or interactive element: **234**
 - Pages with no visual or interactive element: **72**
 - Pages with one or more review flags: **38**
 - Missing navigation sources: **0**
@@ -34,16 +34,16 @@ This is a measurement layer, not an editorial verdict. A short page is not autom
 | Studio     | Reference and help        |     3 |                             1 |                  2 |
 | Catalog    | Overview                  |     1 |                             0 |                  0 |
 | Catalog    | Code Animations           |     9 |                             9 |                  0 |
-| Catalog    | Captions                  |    15 |                            15 |                  0 |
+| Catalog    | Captions                  |    16 |                            16 |                  0 |
 | Catalog    | HTML-in-Canvas            |    13 |                            13 |                  0 |
-| Catalog    | Social Overlays           |     9 |                             9 |                  0 |
+| Catalog    | Social Overlays           |    10 |                            10 |                  0 |
 | Catalog    | Lower Thirds              |    12 |                            12 |                  0 |
 | Catalog    | Shader Transitions        |    14 |                            14 |                  0 |
-| Catalog    | CSS Transitions           |    14 |                            14 |                  0 |
+| Catalog    | CSS Transitions           |    17 |                            17 |                  0 |
 | Catalog    | Showcases                 |    31 |                            31 |                  0 |
-| Catalog    | Data                      |     7 |                             7 |                  0 |
-| Catalog    | Effects                   |    10 |                            10 |                  0 |
-| Catalog    | Blocks                    |     4 |                             4 |                  0 |
+| Catalog    | Data                      |     8 |                             8 |                  0 |
+| Catalog    | Effects                   |    21 |                            21 |                  0 |
+| Catalog    | Blocks                    |    17 |                            17 |                  0 |
 | Developers | Overview                  |     1 |                             0 |                  0 |
 | Developers | Command line              |     3 |                             1 |                  1 |
 | Developers | SDK                       |    14 |                             0 |                  0 |

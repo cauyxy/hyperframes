@@ -4,9 +4,9 @@ Generated: 2026-08-03
 
 Base URL: http://localhost:3101
 
-- Routes: **276**
+- Routes: **306**
 - Viewports: **2** (1280px desktop and 390px mobile)
-- Rendered page checks: **552**
+- Rendered page checks: **612**
 - Findings requiring review: **0**
 
 ## Findings
